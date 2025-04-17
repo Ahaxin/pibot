@@ -1,0 +1,11 @@
+openai
+pvporcupine
+pyaudio
+structlog
+sounddevice
+numpy
+scipy
+gTTS
+pygame
+faster-whisper
+edge-tts
