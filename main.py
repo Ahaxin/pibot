@@ -13,6 +13,7 @@ from assistant.tts import TextToSpeech
 from assistant.transcriber import Transcriber
 from assistant.chatbot import ChatBot
 from assistant.edge_tts import EdgeSpeaker
+from assistant.vad import VADListener
 
 logging.basicConfig(
     level=logging.INFO,
@@ -63,7 +64,10 @@ def main():
         else:
             detector = WakeWordDetector(keywords=WAKE_WORDS)
 
-        recorder = VoiceRecorder(duration=5,device=MIC_DEVICE)
+        vad = VADListener()
+
+        recorder = VoiceRecorder()
+        
         if TTS_MODEL == "EDGE":
             voice, style = EDGE_STYLE_MAP.get(EDGE_TONE, ("en-US-JennyNeural", "default"))
             logging.info(f"✨ Select Edge TTS Model: Vocie = {voice}, Style = {style}")
@@ -89,6 +93,11 @@ def main():
             last_activity = datetime.now()
 
             while is_conversing:
+
+                if not vad.wait_for_voice(timeout=10):
+                    tts.speak("I didn't hear anything. Please try again.")
+                    continue
+                
                 # Record voice
                 audio_file = recorder.record()
                 logging.info(f"🎧 Audio saved to: {audio_file}")

@@ -9,3 +9,4 @@ gTTS
 pygame
 faster-whisper
 edge-tts
+webrtcvad
