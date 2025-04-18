@@ -16,7 +16,7 @@ from assistant.edge_tts import EdgeSpeaker
 from assistant.vad import VADListener
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='[%(asctime)s] %(levelname)s - %(message)s',
     datefmt='%H:%M:%S'
 )
@@ -48,8 +48,8 @@ def is_valid_transcription(text,info):
     if len(text) < 10 and len(text.split()) < 2:
         return False
     
-    if info.no_speech_prob > 0.5:
-        return False
+    # if info.no_speech_prob > 0.5:
+    #     return False
 
     return True
 
