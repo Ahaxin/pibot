@@ -10,3 +10,4 @@ pygame
 faster-whisper
 edge-tts
 webrtcvad
+langdetect

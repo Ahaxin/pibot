@@ -1,6 +1,7 @@
-- test vad function DONE
-- test openAI API [HOLD]
-- test overall flow almost done
-- test different chatbot api DONE
-- test local model (suitable for pi)
+- test vad function [DONE]
+- test openAI API [OPEN]
+- test overall flow almost [DONE]
+- test different chatbot api [DONE]
+- add local model (suitable for pi) [DONE] -> whisper.cpp or openai whisper 
+- test local model (suitable for pi) [NEXT]
 
