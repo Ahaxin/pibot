@@ -84,7 +84,7 @@ def main():
             tts = EdgeSpeaker(voice=voice, style=style)
         elif TTS_MODEL == "openai":
             from assistant.openai_tts import OpenAITTS
-            tts = OpenAITTS("nova")
+            tts = OpenAITTS("shimmer")
         else:
             tts = TextToSpeech(language="en") # Default
             logging.info(f"✨ Select the default TTS model")
@@ -99,7 +99,7 @@ def main():
             logging.info(f"✨ Wake word triggered: {detected_word}")
 
             # Greet the user
-            tts.speak("Yes, what can I help you?")
+            # tts.speak("Yes, what can I help you?")
 
             full_log = []
             is_conversing = True

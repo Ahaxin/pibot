@@ -6,6 +6,7 @@ import os
 import pygame
 import logging
 from config import OPENAI_API_KEY
+import time
 
 class OpenAITTS:
     def __init__(self, voice="alloy"):
@@ -16,7 +17,7 @@ class OpenAITTS:
         logging.info(f"🗣️ Speaking with OpenAI TTS (voice: {self.voice}): {text}")
 
         response = openai.audio.speech.create(
-            model="tts-1",
+            model="tts-1-hd",
             voice=self.voice,
             input=text
         )
@@ -33,4 +34,9 @@ class OpenAITTS:
         while pygame.mixer.music.get_busy():
             continue
 
-        os.remove(tmpfile_path)
+        for _ in range(5):
+            try:
+                os.remove(tmpfile_path)
+                break
+            except PermissionError:
+                time.sleep(0.2)

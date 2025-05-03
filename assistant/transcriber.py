@@ -3,7 +3,7 @@
 import os
 import subprocess
 import logging
-import openai
+from openai import OpenAI
 from config import TRANSCRIBER_MODE,TRANSCRIBE_BACKEND, OPENAI_API_KEY
 from langdetect import detect
 
@@ -12,7 +12,6 @@ class Transcriber:
         self.backend = backend
         self.model_size = model_size
         self.compute_type = compute_type
-        openai.api_key = OPENAI_API_KEY
 
         if backend == "faster_whisper":
             from faster_whisper import WhisperModel
@@ -36,16 +35,18 @@ class Transcriber:
             return info.language, text
 
         elif self.backend == "openai":
+            client = OpenAI(api_key=OPENAI_API_KEY)
             with open(audio_path, "rb") as f:
-                detect_result = openai.Audio.translate("whisper-1", f)
-                language = detect_result.get("language", "en")
+                response = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f,
+                    response_format="verbose_json"
+                )
 
-            # Then transcribe (for full result)
-            with open(audio_path, "rb") as f:
-                result = openai.Audio.transcribe("whisper-1", f)
-
-            return language, result["text"]
-
+            detected_language = response.language
+            text = response.text
+            return detected_language, text
+        
         elif self.backend == "whisper_cpp":
             logging.info("🧠 Running whisper.cpp...")
             temp_out = "transcript.txt"
