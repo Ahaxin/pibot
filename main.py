@@ -3,17 +3,20 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from config import WAKE_WORDS, USE_CUSTOM_WAKE_WORDS, CUSTOM_WAKE_WORD_PATHS
+from config import USE_CUSTOM_WAKE_WORDS, CUSTOM_WAKE_WORD_PATHS
+from config import WAKE_WORD_ENGINE,WAKE_WORDS
 from config import MIC_DEVICE,TRANSCRIBER_MODE,OPENAI_INIT_PROMPT
 from config import STOP_WORDS,TIMEOUT_SECONDS,TTS_MODEL
 from config import EDGE_TONE,EDGE_STYLE_MAP
 from assistant.wake_word import WakeWordDetector
+from assistant.wake_word_vosk import VoskWakeWordDetector
 from assistant.recorder import VoiceRecorder
 from assistant.tts import TextToSpeech
 from assistant.transcriber import Transcriber
 from assistant.chatbot import ChatBot
-from assistant.edge_tts import EdgeSpeaker
+
 from assistant.vad import VADListener
+import re
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -31,25 +34,24 @@ def save_conversation_log(transcript):
     logging.info(f"📝 Conversation saved to: {path}")
 
 def is_valid_transcription(text,info):
-    """
-    Filters out short, vague, or meaningless transcriptions.
-    """
+    text = text.strip()
     if not text:
         return False
 
-    text = text.strip().lower()
-
-    # Block list of known noise/filler outputs
-    blacklist = {"you", "yeah", "uh", "ah", "umm", "hmm", "yo", "hi", "i", "."}
-    if text in blacklist:
+    # Filter common noise
+    blacklist = {"uh", "ah", "umm", "you", "i", "yeah", "yo", "hi", ".", "嗯", "啊"}
+    if text.lower() in blacklist:
         return False
 
-    # Too short? (less than 2 words or 10 characters)
-    if len(text) < 10 and len(text.split()) < 2:
-        return False
-    
-    # if info.no_speech_prob > 0.5:
-    #     return False
+    # For alphabetic scripts (English, Dutch, etc.)
+    if re.search(r"[a-zA-Z]", text):
+        if len(text) < 10 or len(text.split()) < 2:
+            return False
+
+    # For CJK (Chinese, Japanese, Korean), check character length
+    if re.search(r"[\u4e00-\u9fff]", text):
+        if len(text) < 4:
+            return False
 
     return True
 
@@ -59,19 +61,30 @@ def main():
     """
     try:
         # Initialize modules
-        if USE_CUSTOM_WAKE_WORDS:
-            detector = WakeWordDetector(keyword_paths=CUSTOM_WAKE_WORD_PATHS)
+
+        logging.info(f"✨ Select {WAKE_WORD_ENGINE} as wake word detectot: Wakeup Word = {WAKE_WORDS}")
+
+        if WAKE_WORD_ENGINE == "vosk":
+            from assistant.wake_word_vosk import VoskWakeWordDetector
+            detector = VoskWakeWordDetector(WAKE_WORDS)
         else:
-            detector = WakeWordDetector(keywords=WAKE_WORDS)
+            if USE_CUSTOM_WAKE_WORDS:
+                detector = WakeWordDetector(keyword_paths=CUSTOM_WAKE_WORD_PATHS)
+            else:
+                detector = WakeWordDetector(keywords=WAKE_WORDS)
 
         vad = VADListener()
 
         recorder = VoiceRecorder()
         
         if TTS_MODEL == "EDGE":
+            from assistant.edge_tts import EdgeSpeaker
             voice, style = EDGE_STYLE_MAP.get(EDGE_TONE, ("en-US-JennyNeural", "default"))
             logging.info(f"✨ Select Edge TTS Model: Vocie = {voice}, Style = {style}")
             tts = EdgeSpeaker(voice=voice, style=style)
+        elif TTS_MODEL == "openai":
+            from assistant.openai_tts import OpenAITTS
+            tts = OpenAITTS("nova")
         else:
             tts = TextToSpeech(language="en") # Default
             logging.info(f"✨ Select the default TTS model")
@@ -82,8 +95,8 @@ def main():
 
         while True:
             # Wait for wake word
-            # detected_word = detector.listen()
-            # logging.info(f"✨ Wake word triggered: {detected_word}")
+            detected_word = detector.listen()
+            logging.info(f"✨ Wake word triggered: {detected_word}")
 
             # Greet the user
             tts.speak("Yes, what can I help you?")
@@ -103,14 +116,14 @@ def main():
                 logging.info(f"🎧 Audio saved to: {audio_file}")
 
                 # 📜 Transcribe
-                language, text,info = transcriber.transcribe(audio_file)
+                language, text = transcriber.transcribe(audio_file)
 
                 # 🧾 Log results
                 logging.info(f"🔠 Detected language: {language}")
                 logging.info(f"💬 You said (Transcribed text): {text}")
 
                 # 🛡️ Validate
-                if not is_valid_transcription(text,info):
+                if not is_valid_transcription(text,None):
                     logging.info("⚠️ Ignored: Empty or noise-only transcription.")
                     tts.speak("Sorry, I didn't catch that. Please say it again.")
                     continue

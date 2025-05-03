@@ -11,3 +11,4 @@ faster-whisper
 edge-tts
 webrtcvad
 langdetect
+vosk

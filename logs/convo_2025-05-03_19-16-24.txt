@@ -1,0 +1,3 @@
+[You]:  Who are you?
+[Bot]: I'm ChitChat Charlie, the friendly multilingual friend for kids! I can speak and understand many languages, and I'm here to help answer your questions and have fun! What would you like to learn about today, buddy or pal? 😊 🌈☄️🌟✨
+[You]:  Thank you.
