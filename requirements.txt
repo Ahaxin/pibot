@@ -3,7 +3,6 @@ pvporcupine
 pyaudio
 structlog
 sounddevice
-numpy
 scipy
 gTTS
 pygame
@@ -12,3 +11,4 @@ edge-tts
 webrtcvad
 langdetect
 vosk
+numpy --only-binary=numpy
