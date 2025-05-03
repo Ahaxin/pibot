@@ -7,25 +7,24 @@ import logging
 import collections
 import time
 import os
-import struct
 
 class VoiceRecorder:
-    def __init__(self, output_path="output/audio.wav", sample_rate=16000, max_record_seconds=10, silence_duration=1.5):
+    def __init__(self, output_path="output/audio.wav", sample_rate=16000, max_record_seconds=10, silence_duration=1.5, pre_buffer_ms=300):
         self.output_path = output_path
         self.sample_rate = sample_rate
         self.max_record_seconds = max_record_seconds
         self.silence_duration = silence_duration
-
-        self.vad = webrtcvad.Vad(2)  # Moderate aggressiveness
         self.frame_duration_ms = 30
-        self.frame_size = int(self.sample_rate * self.frame_duration_ms / 1000)  # samples per frame
-        self.frame_bytes = self.frame_size * 2  # 2 bytes per sample
+        self.frame_size = int(self.sample_rate * self.frame_duration_ms / 1000)
+        self.frame_bytes = self.frame_size * 2
+        self.vad = webrtcvad.Vad(2)
 
+        # Pre-buffer setup (300ms = 10 frames)
+        self.pre_buffer_frames = int(pre_buffer_ms / self.frame_duration_ms)
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
-        
-    def record(self):
-        logging.info("🎙️ VoiceRecorder is listening...")
+    def record(self, prebuffer=None):
+        logging.info("🎙️ Starting VAD-based recording with pre-buffer...")
 
         audio = pyaudio.PyAudio()
         stream = audio.open(format=pyaudio.paInt16,
@@ -35,9 +34,13 @@ class VoiceRecorder:
                             frames_per_buffer=self.frame_size)
 
         frames = []
-        silence_start_time = None
+        pre_buffer = collections.deque(maxlen=self.pre_buffer_frames)
+        silence_start = None
         start_time = time.time()
+        triggered = False
 
+        if prebuffer:
+                frames.extend(prebuffer)
         try:
             while True:
                 frame = stream.read(self.frame_size, exception_on_overflow=False)
@@ -47,20 +50,30 @@ class VoiceRecorder:
                     continue
 
                 is_speech = self.vad.is_speech(frame, self.sample_rate)
-                frames.append(frame)
 
-                if is_speech:
-                    silence_start_time = None
+                if not triggered:
+                    pre_buffer.append(frame)
+                    if is_speech:
+                        triggered = True
+                        frames.extend(pre_buffer)
+                        frames.append(frame)
+                        silence_start = None
+                        logging.info("🎤 Voice detected. Begin recording...")
                 else:
-                    if silence_start_time is None:
-                        silence_start_time = time.time()
-                    elif time.time() - silence_start_time > self.silence_duration:
-                        logging.info("🛑 Silence detected. Ending recording.")
-                        break
+                    frames.append(frame)
+                    if is_speech:
+                        silence_start = None
+                    else:
+                        if silence_start is None:
+                            silence_start = time.time()
+                        elif time.time() - silence_start > self.silence_duration:
+                            logging.info("🛑 Silence detected. Ending recording.")
+                            break
 
                 if time.time() - start_time > self.max_record_seconds:
-                    logging.info("⏳ Max recording duration reached.")
+                    logging.info("⏳ Max recording time reached.")
                     break
+
         finally:
             stream.stop_stream()
             stream.close()
@@ -72,5 +85,5 @@ class VoiceRecorder:
             wf.setframerate(self.sample_rate)
             wf.writeframes(b''.join(frames))
 
-        logging.info(f"✅ Audio saved to: {self.output_path}")
+        logging.info(f"✅ Audio saved: {self.output_path}")
         return self.output_path

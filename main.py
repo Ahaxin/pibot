@@ -107,12 +107,14 @@ def main():
 
             while is_conversing:
 
-                if not vad.wait_for_voice(timeout=10):
-                    tts.speak("I didn't hear anything. Please try again.")
+                prebuffer = vad.wait_for_voice(timeout=10)
+
+                if not prebuffer:
+                    tts.speak("I didn't hear anything.")
                     continue
-                
+
                 # Record voice
-                audio_file = recorder.record()
+                audio_file = recorder.record(prebuffer=prebuffer)
                 logging.info(f"🎧 Audio saved to: {audio_file}")
 
                 # 📜 Transcribe
