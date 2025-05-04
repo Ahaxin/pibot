@@ -11,4 +11,5 @@ edge-tts
 webrtcvad
 langdetect
 vosk
+google-generativeai
 numpy --only-binary=numpy

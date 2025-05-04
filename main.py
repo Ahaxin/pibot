@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from config import USE_CUSTOM_WAKE_WORDS, CUSTOM_WAKE_WORD_PATHS
 from config import WAKE_WORD_ENGINE,WAKE_WORDS
-from config import MIC_DEVICE,TRANSCRIBER_MODE,OPENAI_INIT_PROMPT
+from config import MIC_DEVICE,TRANSCRIBER_MODE,SYSTEM_PROMPT
 from config import STOP_WORDS,TIMEOUT_SECONDS,TTS_MODEL
 from config import EDGE_TONE,EDGE_STYLE_MAP
 from assistant.wake_word import WakeWordDetector
@@ -90,7 +90,7 @@ def main():
             logging.info(f"✨ Select the default TTS model")
 
         transcriber = Transcriber(model_size=TRANSCRIBER_MODE)  # Can be "tiny" for Pi
-        chatbot = ChatBot(system_prompt=OPENAI_INIT_PROMPT)
+        chatbot = ChatBot(system_prompt=SYSTEM_PROMPT)
 
 
         while True:
@@ -99,7 +99,7 @@ def main():
             logging.info(f"✨ Wake word triggered: {detected_word}")
 
             # Greet the user
-            # tts.speak("Yes, what can I help you?")
+            tts.speak("Yes, what can I help you?")
 
             full_log = []
             is_conversing = True
